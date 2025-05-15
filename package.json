@@ -7,10 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "build:dev": "env-cmd -f .env.dev next build",
-    "build:sit": "env-cmd -f .env.sit next build",
-    "build:uat": "env-cmd -f .env.uat next build",
-    "build:prod": "env-cmd -f .env.prod next build"
+    "build:dev": "next build",
+    "build:sit": "next build",
+    "build:uat": "next build",
+    "build:prod": "next build"
   },
   "dependencies": {
     "next": "13.5",
