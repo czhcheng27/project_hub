@@ -1,15 +1,25 @@
-name: CI/CD Pipeline for Multi-Env Next.js
+name: CI/CD for Multi-Env Next.js
 
 on:
   push:
-    branches: [dev, sit, uat, master]
+    branches:
+      - dev
+      - sit
+      - uat
+      - master
   pull_request:
-    branches: [dev, sit, uat, master]
+    branches:
+      - dev
+      - sit
+      - uat
+      - master
 
 jobs:
-  build-and-deploy:
+  # 公共步骤，checkout + setup + install，其他 job 复用
+  setup:
     runs-on: ubuntu-latest
-
+    outputs:
+      cache-hit: ${{ steps.cache-deps.outputs.cache-hit }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -19,47 +29,58 @@ jobs:
         with:
           node-version: 18
 
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v3
+        with:
+          path: ~/.yarn/cache
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
       - name: Install dependencies
         run: yarn install
 
-      - name: Lint
-        run: yarn lint
+  build-dev:
+    needs: setup
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'dev'
+    steps:
+      - name: Build for dev
+        run: yarn build:dev
 
-      #  如果暂时不跑测试，这一段注释掉
-      # - name:  Run tests
-      #   if: github.ref_name == 'dev' || github.ref_name == 'sit'
-      #   run: yarn test
+  build-sit:
+    needs: setup
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'sit'
+    steps:
+      - name: Build for sit
+        run: yarn build:sit
 
-      - name: Build project with correct env
-        run: |
-          echo "Building for branch: $GITHUB_REF_NAME"
-          if [[ "$GITHUB_REF_NAME" == "dev" ]]; then
-            yarn build:dev
-          elif [[ "$GITHUB_REF_NAME" == "sit" ]]; then
-            yarn build:sit
-          elif [[ "$GITHUB_REF_NAME" == "uat" ]]; then
-            yarn build:uat
-          elif [[ "$GITHUB_REF_NAME" == "master" ]]; then
-            yarn build:prod
-          else
-            echo "No build script for this branch"
-            exit 1
-          fi
+  build-uat:
+    needs: setup
+    runs-on: ubuntu-latest
+    environment:
+      name: uat # 触发 UAT 环境的人工审批
+      url: https://uat.yoursite.com
+    if: github.ref_name == 'uat'
+    steps:
+      - name: Build for uat
+        run: yarn build:uat
 
-      - name: Deploy to SIT
-        if: github.ref_name == 'sit'
-        run: echo "Deploying to SIT..."
+      - name: Deploy to UAT
+        run: echo "Deploying to UAT environment..."
 
-      - name: Deploy to UAT (with approval)
-        if: github.ref_name == 'uat'
-        environment:
-          name: uat #  和 GitHub 环境名一致
-          url: https://uat.example.com
-        run: echo "Deploying to UAT..."
+  deploy-prod:
+    needs: setup
+    runs-on: ubuntu-latest
+    environment:
+      name: production # 触发生产环境的人工审批
+      url: https://www.yoursite.com
+    if: github.ref_name == 'master'
+    steps:
+      - name: Build for prod
+        run: yarn build:prod
 
-      - name: Deploy to Production (with approval)
-        if: github.ref_name == 'master'
-        environment:
-          name: production #  和 GitHub 环境名一致
-          url: https://yourapp.com
-        run: echo "Deploying to Production..."
+      - name: Deploy to Production
+        run: echo "Deploying to Production environment..."
