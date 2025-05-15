@@ -36,6 +36,9 @@ jobs:
       # - name: Run tests
       #   run: npm run test -- --ci --coverage
 
+      - name: Clean previous build
+        run: rm -rf .next
+
       - name: Build project based on branch
         run: |
           echo "Running build for branch: $GITHUB_REF"
