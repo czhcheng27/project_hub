@@ -1,21 +1,13 @@
-name: CI for Next.js with multi-branch
+name: CI/CD Pipeline for Multi-Env Next.js
 
 on:
   push:
-    branches:
-      - dev
-      - sit
-      - uat
-      - master
+    branches: [dev, sit, uat, master]
   pull_request:
-    branches:
-      - dev
-      - sit
-      - uat
-      - master
+    branches: [dev, sit, uat, master]
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,21 +22,44 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Lint code
+      - name: Lint
         run: yarn lint
 
-      - name: Build project based on branch
+      #  如果暂时不跑测试，这一段注释掉
+      # - name:  Run tests
+      #   if: github.ref_name == 'dev' || github.ref_name == 'sit'
+      #   run: yarn test
+
+      - name: Build project with correct env
         run: |
-          echo "Building branch $GITHUB_REF"
-          if [[ "$GITHUB_REF" == "refs/heads/dev" ]]; then
+          echo "Building for branch: $GITHUB_REF_NAME"
+          if [[ "$GITHUB_REF_NAME" == "dev" ]]; then
             yarn build:dev
-          elif [[ "$GITHUB_REF" == "refs/heads/sit" ]]; then
+          elif [[ "$GITHUB_REF_NAME" == "sit" ]]; then
             yarn build:sit
-          elif [[ "$GITHUB_REF" == "refs/heads/uat" ]]; then
+          elif [[ "$GITHUB_REF_NAME" == "uat" ]]; then
             yarn build:uat
-          elif [[ "$GITHUB_REF" == "refs/heads/master" ]]; then
+          elif [[ "$GITHUB_REF_NAME" == "master" ]]; then
             yarn build:prod
           else
-            echo "Branch not configured for build"
+            echo "No build script for this branch"
             exit 1
           fi
+
+      - name: Deploy to SIT
+        if: github.ref_name == 'sit'
+        run: echo "Deploying to SIT..."
+
+      - name: Deploy to UAT (with approval)
+        if: github.ref_name == 'uat'
+        environment:
+          name: uat #  和 GitHub 环境名一致
+          url: https://uat.example.com
+        run: echo "Deploying to UAT..."
+
+      - name: Deploy to Production (with approval)
+        if: github.ref_name == 'master'
+        environment:
+          name: production #  和 GitHub 环境名一致
+          url: https://yourapp.com
+        run: echo "Deploying to Production..."
