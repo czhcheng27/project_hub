@@ -15,11 +15,9 @@ on:
       - master
 
 jobs:
-  # 公共步骤，checkout + setup + install，其他 job 复用
-  setup:
+  build-dev:
     runs-on: ubuntu-latest
-    outputs:
-      cache-hit: ${{ steps.cache-deps.outputs.cache-hit }}
+    if: github.ref_name == 'dev'
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -29,9 +27,9 @@ jobs:
         with:
           node-version: 18
 
-      - name: Cache dependencies
-        id: cache-deps
+      - name: Cache node_modules
         uses: actions/cache@v3
+        id: yarn-cache
         with:
           path: ~/.yarn/cache
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
@@ -41,38 +39,62 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-  build-dev:
-    needs: setup
-    runs-on: ubuntu-latest
-    if: github.ref_name == 'dev'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: Build for dev
         run: yarn build:dev
 
   build-sit:
-    needs: setup
     runs-on: ubuntu-latest
     if: github.ref_name == 'sit'
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        id: yarn-cache
+        with:
+          path: ~/.yarn/cache
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        run: yarn install
+
       - name: Build for sit
         run: yarn build:sit
 
   build-uat:
-    needs: setup
     runs-on: ubuntu-latest
     environment:
-      name: uat # 触发 UAT 环境的人工审批
+      name: uat
       url: https://uat.yoursite.com
     if: github.ref_name == 'uat'
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        id: yarn-cache
+        with:
+          path: ~/.yarn/cache
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        run: yarn install
 
       - name: Build for uat
         run: yarn build:uat
@@ -81,15 +103,31 @@ jobs:
         run: echo "Deploying to UAT environment..."
 
   deploy-prod:
-    needs: setup
     runs-on: ubuntu-latest
     environment:
-      name: production # 触发生产环境的人工审批
+      name: production
       url: https://www.yoursite.com
     if: github.ref_name == 'master'
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        id: yarn-cache
+        with:
+          path: ~/.yarn/cache
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        run: yarn install
 
       - name: Build for prod
         run: yarn build:prod
