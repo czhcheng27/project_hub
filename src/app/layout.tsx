@@ -7,13 +7,13 @@ export const metadata = {
   },
 };
 
-const RootLayout = ({ children }: React.PropsWithChildren) => (
-  <html lang="en">
-    <head>
-      <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-    </head>
-    <body>{children}</body>
-  </html>
-);
+const RootLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <html lang="en">
+      <head />
+      <body>{children}</body>
+    </html>
+  );
+};
 
 export default RootLayout;

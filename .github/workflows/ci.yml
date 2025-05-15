@@ -1,4 +1,4 @@
-name: CI for Multi-Env Next.js
+name: CI for Next.js with multi-branch
 
 on:
   push:
@@ -33,15 +33,9 @@ jobs:
       - name: Lint code
         run: yarn lint
 
-      # - name: Run tests
-      #   run: npm run test -- --ci --coverage
-
-      - name: Clean previous build
-        run: rm -rf .next
-
       - name: Build project based on branch
         run: |
-          echo "Running build for branch: $GITHUB_REF"
+          echo "Building branch $GITHUB_REF"
           if [[ "$GITHUB_REF" == "refs/heads/dev" ]]; then
             yarn build:dev
           elif [[ "$GITHUB_REF" == "refs/heads/sit" ]]; then
@@ -51,5 +45,6 @@ jobs:
           elif [[ "$GITHUB_REF" == "refs/heads/master" ]]; then
             yarn build:prod
           else
-            echo "This branch is not configured for build"
+            echo "Branch not configured for build"
+            exit 1
           fi
